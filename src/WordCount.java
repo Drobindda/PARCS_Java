@@ -11,7 +11,6 @@ public class WordCount implements AM {
         }
 
         int numWorkers = Integer.parseInt(args[0]);
-
         task curtask = new task();
         curtask.addJarFile("WordCount.jar");
         AMInfo info = new AMInfo(curtask, null);
@@ -33,6 +32,8 @@ public class WordCount implements AM {
 
         System.err.println("Forwarding parts to workers...");
         channel[] channels = new channel[numWorkers];
+        long startTime = System.nanoTime(); // Start timing
+
         for (int i = 0; i < numWorkers; i++) {
             int start = i * partLength;
             int end = Math.min((i + 1) * partLength, len);
@@ -52,10 +53,15 @@ public class WordCount implements AM {
             mergeCounts(globalCounts, localCounts);
         }
 
+        long endTime = System.nanoTime(); // End timing
+        long duration = (endTime - startTime) / 1_000_000; // Convert ns to ms
+
         System.err.println("Result:");
         for (Map.Entry<String, Integer> entry : globalCounts.entrySet()) {
             System.out.println(entry.getKey() + ": " + entry.getValue());
         }
+
+        System.err.println("Time passed: " + duration + " ms.");
 
         curtask.end();
     }
@@ -63,7 +69,7 @@ public class WordCount implements AM {
     public void run(AMInfo info) {
         String textChunk = (String) info.parent.readObject();
         Map<String, Integer> wordCounts = countWords(textChunk);
-        info.parent.write(wordCounts);
+        info.parent.write((Serializable) wordCounts);;
     }
 
     private static Map<String, Integer> countWords(String text) {
